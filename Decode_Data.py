@@ -1,7 +1,7 @@
 # import os
 # import random
-# import numpy as np
-# import cv2
+import numpy as np
+import cv2
 # from sklearn.ensemble import RandomForestClassifier
 # import pandas
 
@@ -9,12 +9,9 @@ from xml.dom import minidom
 from dataclasses import dataclass
 
 class Decode_Data:
-    
-    # def __init__():
-    #     print("-")
 
     def read_annotation(self,path,name):
-        full_path = path+name;
+        full_path = path+name+".xml";
         doc = minidom.parse(full_path)
         
         width = doc.getElementsByTagName('width')[0].childNodes[0].data
@@ -25,11 +22,15 @@ class Decode_Data:
         ymin = doc.getElementsByTagName('ymin')[0].childNodes[0].data
         ymax = doc.getElementsByTagName('ymax')[0].childNodes[0].data
         
-        return Annotation(name, width, height, xmin, xmax, ymin, ymax, class_name)
+        return DataUnit(name, width, height, xmin, xmax, ymin, ymax, class_name,None)
+    
+    def read_image(self,ob):
+        ob.image = cv2.imread("images\\"+ob.filename+".png")
+        print()
     
     
 @dataclass
-class Annotation:
+class DataUnit:
     filename: str
     width: int 
     height: int 
@@ -38,11 +39,15 @@ class Annotation:
     box_ymin: int
     box_ymax: int
     class_name: str
+    image: np.array
    
     
 
 dekoder1 = Decode_Data();
 path = "annotations\\"
-filename = "road0.xml"
+filename = "road0"
 test = dekoder1.read_annotation(path,filename)
+dekoder1.read_image(test)
+print()
+
 
