@@ -1,5 +1,6 @@
 import os
 # import random
+import shutil
 import numpy as np
 import cv2
 #import json
@@ -18,24 +19,33 @@ class Decode_Data:
                      "height": [],
                      "class_name_true": [],
                      "class_name_identified": [],
-                     "image": [],
-                     "box_true": []}
+                     "image_full": [],
+                     "image_cropped":[],
+                     "box_true": [],
+                     "box_identified": [],
+                     "ilosc_obiektow":[]}
 
 
 
     def __init__(self):
-        self.generate_units_list()
-        self.fill_object_list()
-        self.split_to_train_and_test(652,88,76,61)
-        self.database_train = pandas.DataFrame(self.dict_train)
-        self.database_test = pandas.DataFrame(self.dict_test)
 
-        #debugowo
-        self.database_whole = pandas.DataFrame(self.DataUnit_dict)
-        self.database_whole.to_csv("database_whole.csv")
+        #if os.path.isdir("train"):
+        if False:
+            #struktrura juz byla robiona
+            self.database_train = pandas.read_csv("train\\database_train.csv")
+            self.database_test = pandas.read_csv("test\\database_test.csv")
+        else:
+            self.generate_units_list()
+            self.fill_object_list()
+            self.split_to_train_and_test(652,88,76,61)
+            self.database_train = pandas.DataFrame(self.dict_train)
+            self.database_test = pandas.DataFrame(self.dict_test)
+            #self.move_reorganize()
 
-        self.move_reorganize()
-
+            #debugowo
+            # self.database_whole = pandas.DataFrame(self.DataUnit_dict)
+            # self.database_whole.to_csv("database_whole.csv")
+#TODO obrazy z test nie mają być cropnięte
     def generate_units_list(self):
         onlyfiles = [f for f in os.listdir(self.path_anno) if os.path.isfile(os.path.join(self.path_anno, f))]
         for i in range(len(onlyfiles)):
@@ -43,26 +53,40 @@ class Decode_Data:
         self.names_list = onlyfiles # ( ͡° ͜ʖ ͡°)
 
     def fill_object_list(self):
-        for name in self.names_list:
 
-            #xml
+        for name in self.names_list:
             full_path = self.path_anno + name + ".xml"
             doc = minidom.parse(full_path)
 
-            self.DataUnit_dict["name"].append(name)
-            self.DataUnit_dict["width"].append(int(doc.getElementsByTagName('width')[0].childNodes[0].data))
-            self.DataUnit_dict["height"].append(int(doc.getElementsByTagName('height')[0].childNodes[0].data))
-            self.DataUnit_dict["class_name_true"].append(doc.getElementsByTagName('name')[0].childNodes[0].data)
-            self.DataUnit_dict["class_name_identified"].append(None)
-            xmin = int(doc.getElementsByTagName('xmin')[0].childNodes[0].data)
-            xmax = int(doc.getElementsByTagName('xmax')[0].childNodes[0].data)
-            ymin = int(doc.getElementsByTagName('ymin')[0].childNodes[0].data)
-            ymax = int(doc.getElementsByTagName('ymax')[0].childNodes[0].data)
-            self.DataUnit_dict["box_true"].append([xmin,xmax,ymin,ymax])
-            #img
-            img = cv2.imread(self.path_images + name + ".png")
-            cropped_img = img[ymin:ymax, xmin:xmax]
-            self.DataUnit_dict["image"].append(cropped_img)
+            width = int(doc.getElementsByTagName('width')[0].childNodes[0].data)
+            height = int(doc.getElementsByTagName('height')[0].childNodes[0].data)
+            elements = doc.getElementsByTagName('object')
+            for obj in elements:
+                # elementy są w 1 3 5 7 9 11
+                # 1.child[0] = typ (trafficlight)
+                # 3.child[0] = pose (unspecified)
+                # 5.child[0] = truncated (0)
+                # 7.child[0] = occluded (0)
+                # 9.child[0] = difficult (0)
+                # 11.child[1].child[0] = xmin
+                # 11.child[3].child[0] = ymin
+                # 11.child[5].child[0] = xmax
+                # 11.child[7].child[0] = ymax
+                self.DataUnit_dict["name"].append(name)
+                self.DataUnit_dict["width"].append(width)
+                self.DataUnit_dict["height"].append(height)
+                self.DataUnit_dict["class_name_true"].append(obj.childNodes[1].childNodes[0].data)
+                self.DataUnit_dict["class_name_identified"].append(None)
+                self.DataUnit_dict["ilosc_obiektow"].append(len(elements))
+                xmin = int(obj.childNodes[11].childNodes[1].childNodes[0].data)
+                xmax = int(obj.childNodes[11].childNodes[5].childNodes[0].data)
+                ymin = int(obj.childNodes[11].childNodes[3].childNodes[0].data)
+                ymax = int(obj.childNodes[11].childNodes[7].childNodes[0].data)
+                self.DataUnit_dict["box_true"].append([xmin, xmax, ymin, ymax])
+                img = cv2.imread(self.path_images + name + ".png")
+                self.DataUnit_dict["image_full"].append(img)
+                cropped_img = img[ymin:ymax, xmin:xmax]
+                self.DataUnit_dict["image_cropped"].append(cropped_img)
 
     def show_all_classes(self):
         print(self.database["class_name_true"].value_counts())
@@ -76,6 +100,13 @@ class Decode_Data:
         # trafficlight
         # 61
         # Name: class_name_true, dtype: int64
+
+    def scandown(self,elements, indent):
+        for el in elements:
+            print("   " * indent + "nodeName: " + str(el.nodeName))
+            print("   " * indent + "nodeValue: " + str(el.nodeValue))
+            print("   " * indent + "childNodes: " + str(el.childNodes))
+            self.scandown(el.childNodes, indent + 1)
 
     def split_to_train_and_test(self,speedlimit_n,crosswalk_n,stop_n,traffic_light_n):
         data_train = {
@@ -165,7 +196,12 @@ class Decode_Data:
             for index, row in self.database_test.iterrows():
                 os.rename("images\\"+row["name"]+".png","test\\images\\"+row["name"]+".png")
 
+        shutil.rmtree("annotations")
+        os.rmdir("images")
 
 
+# TODO train ograniczyc ilosc pol, zwlaszcza tylko image_cropped dzieki czemu moze byc tam uzywane bez znaczenia czy jest wiele na zdjeciu czy nie
+# TODO zeby jakos rozsadnie dzielilo krotki jesli pochodza z tego samego zdjecia
+# TODO w tym zamienic keys w kopiowaniu krotek na customowe bazy danych czyli z data_train.keys() itp
 
 
