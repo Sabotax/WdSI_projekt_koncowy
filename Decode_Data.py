@@ -2,19 +2,36 @@ import os
 # import random
 import numpy as np
 import cv2
-import json
+#import json
 # from sklearn.ensemble import RandomForestClassifier
 # import pandas
 
 from xml.dom import minidom
 from dataclasses import dataclass
+import pandas
 
 class Decode_Data:
     path_anno = "annotations\\"
     path_images = "images\\"
-    DataUnit_list = []
+    DataUnit_dict = {"name": [],
+                     "width": [],
+                     "height": [],
+                     "class_name_true": [],
+                     "class_name_identified": [],
+                     "image": []}
 
-    def generate_list(self):
+
+
+    def __init__(self):
+        self.generate_units_list()
+        self.fill_object_list()
+        self.split_to_train_and_test()
+        self.database_train = pandas.DataFrame(self.dict_train)
+        self.database_test = pandas.DataFrame(self.dict_test)
+        #print(self.database)
+        self.show_all_classes()
+
+    def generate_units_list(self):
         onlyfiles = [f for f in os.listdir(self.path_anno) if os.path.isfile(os.path.join(self.path_anno, f))]
         for i in range(len(onlyfiles)):
             onlyfiles[i] = onlyfiles[i][0:len(onlyfiles[i])-4]
@@ -22,69 +39,140 @@ class Decode_Data:
 
     def fill_object_list(self):
         for name in self.names_list:
-            self.DataUnit_list.append( DataUnit(name,self.path_anno,self.path_images) )
 
-        # testowanie
-        # self.DataUnit_list.append(DataUnit("road0", self.path_anno, self.path_images))
-        # self.DataUnit_list.append(DataUnit("road1", self.path_anno, self.path_images))
-        # self.DataUnit_list.append(DataUnit("road2", self.path_anno, self.path_images))
-        print()
+            #xml
+            full_path = self.path_anno + name + ".xml"
+            doc = minidom.parse(full_path)
 
-    # def save_DataUnit_list(self):
-    #     str = json.dumps(self.DataUnit_list[0].__dict__,skipkeys=True)
-    #     print(str)
+            self.DataUnit_dict["name"].append(name)
+            self.DataUnit_dict["width"].append(int(doc.getElementsByTagName('width')[0].childNodes[0].data))
+            self.DataUnit_dict["height"].append(int(doc.getElementsByTagName('height')[0].childNodes[0].data))
+            self.DataUnit_dict["class_name_true"].append(doc.getElementsByTagName('name')[0].childNodes[0].data)
+            self.DataUnit_dict["class_name_identified"].append(None)
+            xmin = int(doc.getElementsByTagName('xmin')[0].childNodes[0].data)
+            xmax = int(doc.getElementsByTagName('xmax')[0].childNodes[0].data)
+            ymin = int(doc.getElementsByTagName('ymin')[0].childNodes[0].data)
+            ymax = int(doc.getElementsByTagName('ymax')[0].childNodes[0].data)
+            #img
+            img = cv2.imread(self.path_images + name + ".png")
+            cropped_img = img[ymin:ymax, xmin:xmax]
+            self.DataUnit_dict["image"].append(cropped_img)
 
-class DataUnit:
+    def show_all_classes(self):
+        print(self.database["class_name_true"].value_counts())
+        #output
+        # speedlimit
+        # 652
+        # crosswalk
+        # 88
+        # stop
+        # 76
+        # trafficlight
+        # 61
+        # Name: class_name_true, dtype: int64
 
-    def __init__(self,filename,path_anno,path_images):
-        self.name = filename
-        self.path_anno = path_anno
-        self.path_images = path_images
+    def split_to_train_and_test(self,speedlimit_n,crosswalk_n,stop_n,traffic_light_n):
+        data_train = {"name": [],
+            "width": [],
+            "height": [],
+            "class_name_true": [],
+            "class_name_identified": [],
+            "image": [] }
 
-        self.read_annotation()
-        self.read_image()
+        data_test = {"name": [],
+            "width": [],
+            "height": [],
+            "class_name_true": [],
+            "class_name_identified": [],
+            "image": [] }
 
-    def read_annotation(self):
-        full_path = self.path_anno + self.name + ".xml"
-        doc = minidom.parse(full_path)
+        part = 1/3 #ile trafi do train (reszta do test)
 
-        self.width = int(doc.getElementsByTagName('width')[0].childNodes[0].data)
-        self.height = int(doc.getElementsByTagName('height')[0].childNodes[0].data)
-        self.class_name = doc.getElementsByTagName('name')[0].childNodes[0].data
-        self.xmin = int(doc.getElementsByTagName('xmin')[0].childNodes[0].data)
-        self.xmax = int(doc.getElementsByTagName('xmax')[0].childNodes[0].data)
-        self.ymin = int(doc.getElementsByTagName('ymin')[0].childNodes[0].data)
-        self.ymax = int(doc.getElementsByTagName('ymax')[0].childNodes[0].data)
+        speedlimit_c = 0
+        crosswalk_c = 0
+        stop_c = 0
+        traffic_light_c = 0
 
-    def read_image(self):
-        img = cv2.imread(self.path_images+self.name+".png")
-        cropped_img = img[self.ymin:self.ymax,self.xmin:self.xmax]
-        self.image = cropped_img
-        #self.image_to_list = self.image.tolist()
+        for i in range(len(self.database)) :
 
+            if self.DataUnit_dict["class_name_true"][i] == "speedlimit":
 
+                if speedlimit_c < speedlimit_n * part:
+                    data_train["name"].append(self.DataUnit_dict["name"][i])
+                    data_train["width"].append(self.DataUnit_dict["width"][i])
+                    data_train["height"].append(self.DataUnit_dict["height"][i])
+                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_train["image"].append(self.DataUnit_dict["image"])
+                else:
+                    data_test["name"].append(self.DataUnit_dict["name"][i])
+                    data_test["width"].append(self.DataUnit_dict["width"][i])
+                    data_test["height"].append(self.DataUnit_dict["height"][i])
+                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_test["image"].append(self.DataUnit_dict["image"][i])
 
+                speedlimit_c += 1
 
-# TODO zapisac liste obiektow wraz z zdekodowanymi obrazami do pliku wtedy to jest koniec w tym pliku .py (opcjonalnie)
-# nastepnie w nastepnym ogarnac skrypt do dzielenia na train i test
+            if self.DataUnit_dict["class_name_true"][i] == "crosswalk":
 
-   
-    
+                if crosswalk_c < crosswalk_n * part:
+                    data_train["name"].append(self.DataUnit_dict["name"][i])
+                    data_train["width"].append(self.DataUnit_dict["width"][i])
+                    data_train["height"].append(self.DataUnit_dict["height"][i])
+                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_train["image"].append(self.DataUnit_dict["image"])
+                else:
+                    data_test["name"].append(self.DataUnit_dict["name"][i])
+                    data_test["width"].append(self.DataUnit_dict["width"][i])
+                    data_test["height"].append(self.DataUnit_dict["height"][i])
+                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_test["image"].append(self.DataUnit_dict["image"][i])
 
-#dekoder1 = Decode_Data();
-path = "annotations\\"
-filename = "road0"
-#test = dekoder1.read_annotation(path,filename)
-# test = DataUnit("road0","annotations\\","images\\")
-# test.read_annotation()
-# test.read_image()
-# cv2.imshow("a",test.image)
-# cv2.waitKey(0)
+                crosswalk_c += 1
 
-dekoder1 = Decode_Data()
-dekoder1.generate_list()
-dekoder1.fill_object_list()
-#dekoder1.save_DataUnit_list()
-print()
+            if self.DataUnit_dict["class_name_true"][i] == "stop":
+
+                if stop_c < stop_n * part:
+                    data_train["name"].append(self.DataUnit_dict["name"][i])
+                    data_train["width"].append(self.DataUnit_dict["width"][i])
+                    data_train["height"].append(self.DataUnit_dict["height"][i])
+                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_train["image"].append(self.DataUnit_dict["image"])
+                else:
+                    data_test["name"].append(self.DataUnit_dict["name"][i])
+                    data_test["width"].append(self.DataUnit_dict["width"][i])
+                    data_test["height"].append(self.DataUnit_dict["height"][i])
+                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_test["image"].append(self.DataUnit_dict["image"][i])
+
+                stop_c += 1
+
+            if self.DataUnit_dict["class_name_true"][i] == "traffic_light":
+
+                if traffic_light_c < traffic_light_n * part:
+                    data_train["name"].append(self.DataUnit_dict["name"][i])
+                    data_train["width"].append(self.DataUnit_dict["width"][i])
+                    data_train["height"].append(self.DataUnit_dict["height"][i])
+                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_train["image"].append(self.DataUnit_dict["image"])
+                else:
+                    data_test["name"].append(self.DataUnit_dict["name"][i])
+                    data_test["width"].append(self.DataUnit_dict["width"][i])
+                    data_test["height"].append(self.DataUnit_dict["height"][i])
+                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
+                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
+                    data_test["image"].append(self.DataUnit_dict["image"][i])
+
+                traffic_light_c += 1
+
+        self.dict_train = data_train
+        self.dict_test = data_test
+
 
 
