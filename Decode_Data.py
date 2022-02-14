@@ -18,18 +18,23 @@ class Decode_Data:
                      "height": [],
                      "class_name_true": [],
                      "class_name_identified": [],
-                     "image": []}
+                     "image": [],
+                     "box_true": []}
 
 
 
     def __init__(self):
         self.generate_units_list()
         self.fill_object_list()
-        self.split_to_train_and_test()
+        self.split_to_train_and_test(652,88,76,61)
         self.database_train = pandas.DataFrame(self.dict_train)
         self.database_test = pandas.DataFrame(self.dict_test)
-        #print(self.database)
-        self.show_all_classes()
+
+        #debugowo
+        self.database_whole = pandas.DataFrame(self.DataUnit_dict)
+        self.database_whole.to_csv("database_whole.csv")
+
+        self.move_reorganize()
 
     def generate_units_list(self):
         onlyfiles = [f for f in os.listdir(self.path_anno) if os.path.isfile(os.path.join(self.path_anno, f))]
@@ -53,6 +58,7 @@ class Decode_Data:
             xmax = int(doc.getElementsByTagName('xmax')[0].childNodes[0].data)
             ymin = int(doc.getElementsByTagName('ymin')[0].childNodes[0].data)
             ymax = int(doc.getElementsByTagName('ymax')[0].childNodes[0].data)
+            self.DataUnit_dict["box_true"].append([xmin,xmax,ymin,ymax])
             #img
             img = cv2.imread(self.path_images + name + ".png")
             cropped_img = img[ymin:ymax, xmin:xmax]
@@ -72,19 +78,23 @@ class Decode_Data:
         # Name: class_name_true, dtype: int64
 
     def split_to_train_and_test(self,speedlimit_n,crosswalk_n,stop_n,traffic_light_n):
-        data_train = {"name": [],
+        data_train = {
+            "name": [],
             "width": [],
             "height": [],
             "class_name_true": [],
             "class_name_identified": [],
-            "image": [] }
+            "image": [],
+            "box_true": []}
 
-        data_test = {"name": [],
+        data_test = {
+            "name": [],
             "width": [],
             "height": [],
             "class_name_true": [],
             "class_name_identified": [],
-            "image": [] }
+            "image": [],
+            "box_true": []}
 
         part = 1/3 #ile trafi do train (reszta do test)
 
@@ -93,86 +103,69 @@ class Decode_Data:
         stop_c = 0
         traffic_light_c = 0
 
-        for i in range(len(self.database)) :
+        for i in range(len(self.DataUnit_dict["name"])) :
 
             if self.DataUnit_dict["class_name_true"][i] == "speedlimit":
-
                 if speedlimit_c < speedlimit_n * part:
-                    data_train["name"].append(self.DataUnit_dict["name"][i])
-                    data_train["width"].append(self.DataUnit_dict["width"][i])
-                    data_train["height"].append(self.DataUnit_dict["height"][i])
-                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_train["image"].append(self.DataUnit_dict["image"])
+                    for pole in self.DataUnit_dict.keys():
+                        data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    data_test["name"].append(self.DataUnit_dict["name"][i])
-                    data_test["width"].append(self.DataUnit_dict["width"][i])
-                    data_test["height"].append(self.DataUnit_dict["height"][i])
-                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_test["image"].append(self.DataUnit_dict["image"][i])
+                    for pole in self.DataUnit_dict.keys():
+                        data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 speedlimit_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "crosswalk":
-
                 if crosswalk_c < crosswalk_n * part:
-                    data_train["name"].append(self.DataUnit_dict["name"][i])
-                    data_train["width"].append(self.DataUnit_dict["width"][i])
-                    data_train["height"].append(self.DataUnit_dict["height"][i])
-                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_train["image"].append(self.DataUnit_dict["image"])
+                    for pole in self.DataUnit_dict.keys():
+                        data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    data_test["name"].append(self.DataUnit_dict["name"][i])
-                    data_test["width"].append(self.DataUnit_dict["width"][i])
-                    data_test["height"].append(self.DataUnit_dict["height"][i])
-                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_test["image"].append(self.DataUnit_dict["image"][i])
+                    for pole in self.DataUnit_dict.keys():
+                        data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 crosswalk_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "stop":
-
                 if stop_c < stop_n * part:
-                    data_train["name"].append(self.DataUnit_dict["name"][i])
-                    data_train["width"].append(self.DataUnit_dict["width"][i])
-                    data_train["height"].append(self.DataUnit_dict["height"][i])
-                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_train["image"].append(self.DataUnit_dict["image"])
+                    for pole in self.DataUnit_dict.keys():
+                        data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    data_test["name"].append(self.DataUnit_dict["name"][i])
-                    data_test["width"].append(self.DataUnit_dict["width"][i])
-                    data_test["height"].append(self.DataUnit_dict["height"][i])
-                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_test["image"].append(self.DataUnit_dict["image"][i])
+                    for pole in self.DataUnit_dict.keys():
+                        data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 stop_c += 1
 
-            if self.DataUnit_dict["class_name_true"][i] == "traffic_light":
-
+            if self.DataUnit_dict["class_name_true"][i] == "trafficlight":
                 if traffic_light_c < traffic_light_n * part:
-                    data_train["name"].append(self.DataUnit_dict["name"][i])
-                    data_train["width"].append(self.DataUnit_dict["width"][i])
-                    data_train["height"].append(self.DataUnit_dict["height"][i])
-                    data_train["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_train["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_train["image"].append(self.DataUnit_dict["image"])
+                    for pole in self.DataUnit_dict.keys():
+                        data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    data_test["name"].append(self.DataUnit_dict["name"][i])
-                    data_test["width"].append(self.DataUnit_dict["width"][i])
-                    data_test["height"].append(self.DataUnit_dict["height"][i])
-                    data_test["class_name_true"].append(self.DataUnit_dict["class_name_true"][i])
-                    data_test["class_name_identified"].append(self.DataUnit_dict["class_name_identified"][i])
-                    data_test["image"].append(self.DataUnit_dict["image"][i])
+                    for pole in self.DataUnit_dict.keys():
+                        data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 traffic_light_c += 1
 
         self.dict_train = data_train
         self.dict_test = data_test
+
+    def move_reorganize(self):
+        if not os.path.isdir("train"):
+            os.mkdir("train")
+            os.mkdir("train\\images")
+            self.database_train.to_csv("train\\database_train.csv")
+
+            for index, row in self.database_train.iterrows():
+                os.rename("images\\"+row["name"]+".png","train\\images\\"+row["name"]+".png")
+
+        if not os.path.isdir("test"):
+            os.mkdir("test")
+            os.mkdir("test\\images")
+            self.database_test.to_csv("test\\database_test.csv")
+
+            for index, row in self.database_test.iterrows():
+                os.rename("images\\"+row["name"]+".png","test\\images\\"+row["name"]+".png")
+
+
 
 
 

@@ -1,4 +1,10 @@
 
 archive.zip
-/images/*
-/annotations/*
+images/*
+annotations/*
+test/*
+train/*
+database_whole.csv
+test/database_test.csv
+test/images/*
+train/images/*
