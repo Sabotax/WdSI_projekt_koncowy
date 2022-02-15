@@ -15,6 +15,12 @@ import pandas
 class Decode_Data:
     path_anno = "annotations\\"
     path_images = "images\\"
+
+    path_anno_train = "train\\annotations\\"
+    path_anno_test = "test\\annotations\\"
+    path_img_train = "train\\images\\"
+    path_img_test = "test\\images\\"
+
     DataUnit_dict = {"name": [],
                      "width": [],
                      "height": [],
@@ -30,38 +36,37 @@ class Decode_Data:
     def __init__(self):
 
         if os.path.isdir("train"):
-            print("wczytuje bazy danych poprzednio utworzone")
-            self.database_train = pandas.read_csv("train\\database_train.csv")
-            self.database_test = pandas.read_csv("test\\database_test.csv")
-            print("wczytano bazy danych pomyslnie")
+            print("tworze baze danych 2")
+
+            self.generate_units_list(self.path_anno_train)
+            self.fill_object_list(self.path_anno_train,self.path_img_train)
+            self.database_train = pandas.DataFrame(self.DataUnit_dict)
+
+            self.generate_units_list(self.path_anno_test)
+            self.fill_object_list(self.path_anno_test,self.path_img_test)
+            self.database_test = pandas.DataFrame(self.DataUnit_dict)
+
+            print("stworzono bazy danych 2 pomyslnie")
         else:
             print("tworze bazy danych")
-            self.generate_units_list()
-            self.fill_object_list()
+            self.generate_units_list(self.path_anno)
+            self.fill_object_list(self.path_anno,self.path_images)
             self.split_to_train_and_test(652,88,76,61)
             self.database_train = pandas.DataFrame(self.dict_train)
             self.database_test = pandas.DataFrame(self.dict_test)
             self.move_reorganize()
             print("stworzono bazy danych i przeorganizowano pliki pomyslnie")
 
-        print("zamieniam image na np array")
-        for index, row in self.database_train.iterrows():
-            row['image'] = np.array(json.loads(row['image']))
-
-        for index, row in self.database_test.iterrows():
-            row['image'] = np.array(json.loads(row['image']))
-        print("pomyslnie zamieniono image na np array")
-
-    def generate_units_list(self):
-        onlyfiles = [f for f in os.listdir(self.path_anno) if os.path.isfile(os.path.join(self.path_anno, f))]
+    def generate_units_list(self,path):
+        onlyfiles = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         for i in range(len(onlyfiles)):
             onlyfiles[i] = onlyfiles[i][0:len(onlyfiles[i])-4]
         self.names_list = onlyfiles # ( ͡° ͜ʖ ͡°)
 
-    def fill_object_list(self):
+    def fill_object_list(self,path_xml,path_images):
 
         for name in self.names_list:
-            full_path = self.path_anno + name + ".xml"
+            full_path = path_xml + name + ".xml"
             doc = minidom.parse(full_path)
 
             width = int(doc.getElementsByTagName('width')[0].childNodes[0].data)
@@ -90,8 +95,8 @@ class Decode_Data:
                 ymax = int(obj.childNodes[11].childNodes[7].childNodes[0].data)
                 self.DataUnit_dict["box_true"].append([xmin, xmax, ymin, ymax])
                 self.DataUnit_dict["box_identified"].append(None)
-                img = cv2.imread(self.path_images + name + ".png")
-                self.DataUnit_dict["image"].append(json.dumps(np.ndarray.tolist(img)))
+                img = cv2.imread(path_images + name + ".png")
+                self.DataUnit_dict["image"].append(img)
                 #cropped_img = img[ymin:ymax, xmin:xmax]
 #TODO pomyslec o odchudzeniu bazy danych (na przyklad train nie potrzebuje image full), (wystarczy image full i odpowiednie odczytywanie boxem a nie)
     def show_all_classes(self):
@@ -189,20 +194,22 @@ class Decode_Data:
         if not os.path.isdir("train"):
             os.mkdir("train")
             os.mkdir("train\\images")
-            print("zamieniam kolumny na listy train")
-            self.database_train.to_csv("train\\database_train.csv")
+            os.mkdir("train\\annotations")
 
             for index, row in self.database_train.iterrows():
+                if os.path.isfile("annotations\\" + row["name"] + ".xml"):
+                    os.rename("annotations\\"+row["name"]+".xml","train\\annotations\\"+row["name"]+".xml")
                 if os.path.isfile("images\\"+row["name"]+".png"):
                     os.rename("images\\"+row["name"]+".png","train\\images\\"+row["name"]+".png")
 
         if not os.path.isdir("test"):
             os.mkdir("test")
             os.mkdir("test\\images")
-            print("zamieniam kolumny na listy test")
-            self.database_test.to_csv("test\\database_test.csv")
+            os.mkdir("test\\annotations")
 
             for index, row in self.database_test.iterrows():
+                if os.path.isfile("annotations\\" + row["name"] + ".xml"):
+                    os.rename("annotations\\"+row["name"]+".xml","test\\annotations\\"+row["name"]+".xml")
                 if os.path.isfile("images\\" + row["name"] + ".png"):
                     os.rename("images\\"+row["name"]+".png","test\\images\\"+row["name"]+".png")
 
