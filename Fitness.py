@@ -9,7 +9,7 @@ class Fitness:
         mianownik = 0
         pred_labels = []
         true_labels = []
-        for index, row in self.data_train.iterrows():
+        for index, row in data.iterrows():
             if row['desc'] is not None:
                 pred_labels.append(row['class_name_identified'])
                 true_labels.append(row['class_name_true'])

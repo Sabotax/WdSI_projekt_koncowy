@@ -29,7 +29,7 @@ class Decode_Data:
                      "image": [],
                      "box_true": [],
                      "box_identified": [],
-                     "ilosc_obiektow":[]}
+                     "ilosc_obiektow":[],}
 
 
 
@@ -97,6 +97,7 @@ class Decode_Data:
                 self.DataUnit_dict["box_identified"].append(None)
                 img = cv2.imread(path_images + name + ".png")
                 self.DataUnit_dict["image"].append(img)
+                #self.DataUnit_dict["desc"].append(None)
                 #cropped_img = img[ymin:ymax, xmin:xmax]
 #TODO pomyslec o odchudzeniu bazy danych (na przyklad train nie potrzebuje image full), (wystarczy image full i odpowiednie odczytywanie boxem a nie)
     def show_all_classes(self):
@@ -215,13 +216,6 @@ class Decode_Data:
 
         shutil.rmtree("annotations")
         os.rmdir("images")
-
-    @staticmethod
-    def str_array_to_ndarray(str):
-        nowy_str = str.replace("\n",",")
-        nowy_str = nowy_str.replace("...,","")
-        nowy_str = nowy_str.replace(",,",",")
-        return nowy_str
 
         # warto zauważyć że o ile podział zgadza się z w bazie danych, to w podziale zdjęc na foldery, zdjecie wyladuje tam gdzie zostanie najpierw zabrane, a staranie
         # by to nie miało miejsca w przypadku gdy i tak nie robi to różnicy dla uczenia maszynowego, a i tak specjalnie są dzielone te foldery tylko dla

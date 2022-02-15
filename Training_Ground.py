@@ -2,6 +2,7 @@ import os.path
 
 import cv2
 import numpy as np
+import pandas
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
@@ -36,16 +37,22 @@ class Training_Ground:
             print("voc.npy zapisano pomyslnie")
 
     def extract_features(self,data):
+
         print("rozpoczynam extract_features")
         sift = cv2.SIFT_create()
         flann = cv2.FlannBasedMatcher_create()
         bow = cv2.BOWImgDescriptorExtractor(sift, flann)
         vocabulary = np.load('voc.npy')
         bow.setVocabulary(vocabulary)
-        for index,row in data.iterrows():
-            kpt = sift.detect(row["image"],None)
-            desc = bow.compute(row["image"],kpt)
-            row['desc'] = desc
+        # for index, row in data.iterrows():
+        #     kpt = sift.detect(row["image"],None)
+        #     desc = bow.compute(row["image"],kpt)
+        #     row["desc"] = desc
+        for i in range(len(data)):
+            kpt = sift.detect(data.loc[i,"image"], None)
+            desc = bow.compute(data.loc[i,"image"],kpt)
+            data.loc[i,"desc"] = desc
+            data.loc[i,"test"] = "test"
         print("zakonczono extract_features")
 
         return data
