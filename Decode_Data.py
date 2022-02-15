@@ -3,7 +3,8 @@ import os
 import shutil
 import numpy as np
 import cv2
-#import json
+import pickle
+import json
 # from sklearn.ensemble import RandomForestClassifier
 # import pandas
 
@@ -19,8 +20,7 @@ class Decode_Data:
                      "height": [],
                      "class_name_true": [],
                      "class_name_identified": [],
-                     "image_full": [],
-                     "image_cropped":[],
+                     "image": [],
                      "box_true": [],
                      "box_identified": [],
                      "ilosc_obiektow":[]}
@@ -29,23 +29,29 @@ class Decode_Data:
 
     def __init__(self):
 
-        #if os.path.isdir("train"):
-        if False:
-            #struktrura juz byla robiona
+        if os.path.isdir("train"):
+            print("wczytuje bazy danych poprzednio utworzone")
             self.database_train = pandas.read_csv("train\\database_train.csv")
             self.database_test = pandas.read_csv("test\\database_test.csv")
+            print("wczytano bazy danych pomyslnie")
         else:
+            print("tworze bazy danych")
             self.generate_units_list()
             self.fill_object_list()
             self.split_to_train_and_test(652,88,76,61)
             self.database_train = pandas.DataFrame(self.dict_train)
             self.database_test = pandas.DataFrame(self.dict_test)
-            #self.move_reorganize()
+            self.move_reorganize()
+            print("stworzono bazy danych i przeorganizowano pliki pomyslnie")
 
-            #debugowo
-            # self.database_whole = pandas.DataFrame(self.DataUnit_dict)
-            # self.database_whole.to_csv("database_whole.csv")
-#TODO obrazy z test nie mają być cropnięte
+        print("zamieniam image na np array")
+        for index, row in self.database_train.iterrows():
+            row['image'] = np.array(json.loads(row['image']))
+
+        for index, row in self.database_test.iterrows():
+            row['image'] = np.array(json.loads(row['image']))
+        print("pomyslnie zamieniono image na np array")
+
     def generate_units_list(self):
         onlyfiles = [f for f in os.listdir(self.path_anno) if os.path.isfile(os.path.join(self.path_anno, f))]
         for i in range(len(onlyfiles)):
@@ -83,11 +89,11 @@ class Decode_Data:
                 ymin = int(obj.childNodes[11].childNodes[3].childNodes[0].data)
                 ymax = int(obj.childNodes[11].childNodes[7].childNodes[0].data)
                 self.DataUnit_dict["box_true"].append([xmin, xmax, ymin, ymax])
+                self.DataUnit_dict["box_identified"].append(None)
                 img = cv2.imread(self.path_images + name + ".png")
-                self.DataUnit_dict["image_full"].append(img)
-                cropped_img = img[ymin:ymax, xmin:xmax]
-                self.DataUnit_dict["image_cropped"].append(cropped_img)
-
+                self.DataUnit_dict["image"].append(json.dumps(np.ndarray.tolist(img)))
+                #cropped_img = img[ymin:ymax, xmin:xmax]
+#TODO pomyslec o odchudzeniu bazy danych (na przyklad train nie potrzebuje image full), (wystarczy image full i odpowiednie odczytywanie boxem a nie)
     def show_all_classes(self):
         print(self.database["class_name_true"].value_counts())
         #output
@@ -109,23 +115,23 @@ class Decode_Data:
             self.scandown(el.childNodes, indent + 1)
 
     def split_to_train_and_test(self,speedlimit_n,crosswalk_n,stop_n,traffic_light_n):
-        data_train = {
-            "name": [],
-            "width": [],
-            "height": [],
-            "class_name_true": [],
-            "class_name_identified": [],
-            "image": [],
-            "box_true": []}
+        data_train = {"name": [],
+                     "width": [],
+                     "height": [],
+                     "class_name_true": [],
+                     "image": [],
+                     "box_true": [],
+                     "ilosc_obiektow":[]}
 
-        data_test = {
-            "name": [],
-            "width": [],
-            "height": [],
-            "class_name_true": [],
-            "class_name_identified": [],
-            "image": [],
-            "box_true": []}
+        data_test = {"name": [],
+                     "width": [],
+                     "height": [],
+                     "class_name_true": [],
+                     "class_name_identified": [],
+                     "image": [],
+                     "box_true": [],
+                     "box_identified": [],
+                     "ilosc_obiektow":[]}
 
         part = 1/3 #ile trafi do train (reszta do test)
 
@@ -138,40 +144,40 @@ class Decode_Data:
 
             if self.DataUnit_dict["class_name_true"][i] == "speedlimit":
                 if speedlimit_c < speedlimit_n * part:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_test.keys():
                         data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 speedlimit_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "crosswalk":
                 if crosswalk_c < crosswalk_n * part:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_test.keys():
                         data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 crosswalk_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "stop":
                 if stop_c < stop_n * part:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_test.keys():
                         data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 stop_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "trafficlight":
                 if traffic_light_c < traffic_light_n * part:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
-                    for pole in self.DataUnit_dict.keys():
+                    for pole in data_test.keys():
                         data_test[pole].append(self.DataUnit_dict[pole][i])
 
                 traffic_light_c += 1
@@ -183,23 +189,39 @@ class Decode_Data:
         if not os.path.isdir("train"):
             os.mkdir("train")
             os.mkdir("train\\images")
+            print("zamieniam kolumny na listy train")
             self.database_train.to_csv("train\\database_train.csv")
 
             for index, row in self.database_train.iterrows():
-                os.rename("images\\"+row["name"]+".png","train\\images\\"+row["name"]+".png")
+                if os.path.isfile("images\\"+row["name"]+".png"):
+                    os.rename("images\\"+row["name"]+".png","train\\images\\"+row["name"]+".png")
 
         if not os.path.isdir("test"):
             os.mkdir("test")
             os.mkdir("test\\images")
+            print("zamieniam kolumny na listy test")
             self.database_test.to_csv("test\\database_test.csv")
 
             for index, row in self.database_test.iterrows():
-                os.rename("images\\"+row["name"]+".png","test\\images\\"+row["name"]+".png")
+                if os.path.isfile("images\\" + row["name"] + ".png"):
+                    os.rename("images\\"+row["name"]+".png","test\\images\\"+row["name"]+".png")
 
         shutil.rmtree("annotations")
         os.rmdir("images")
 
+    @staticmethod
+    def str_array_to_ndarray(str):
+        nowy_str = str.replace("\n",",")
+        nowy_str = nowy_str.replace("...,","")
+        nowy_str = nowy_str.replace(",,",",")
+        return nowy_str
 
+        # warto zauważyć że o ile podział zgadza się z w bazie danych, to w podziale zdjęc na foldery, zdjecie wyladuje tam gdzie zostanie najpierw zabrane, a staranie
+        # by to nie miało miejsca w przypadku gdy i tak nie robi to różnicy dla uczenia maszynowego, a i tak specjalnie są dzielone te foldery tylko dla
+        # sprawdzającego to nie ma potrzeby większość sił zużywać na obracanie plikami poprawnie
+
+# TODO jestli ilosc obektow > 1 to wtedy moze przesunac, ale licnzik zwieksza o n, dodatkowa zawsze sprawdza zanim przesunie czy ma co przesunac zanim to zrobi i inkrementuje c
+#dodatkowo jesli n>1 to wszystkie krotki gdzir n
 # TODO train ograniczyc ilosc pol, zwlaszcza tylko image_cropped dzieki czemu moze byc tam uzywane bez znaczenia czy jest wiele na zdjeciu czy nie
 # TODO zeby jakos rozsadnie dzielilo krotki jesli pochodza z tego samego zdjecia
 # TODO w tym zamienic keys w kopiowaniu krotek na customowe bazy danych czyli z data_train.keys() itp
