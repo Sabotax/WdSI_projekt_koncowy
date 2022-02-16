@@ -65,7 +65,28 @@ class Decode_Data:
             self.database_train = pandas.DataFrame(self.dict_train)
             self.database_test = pandas.DataFrame(self.dict_test)
             self.move_reorganize()
+
+            self.generate_units_list(self.path_anno_train)
+            self.fill_object_list(self.path_anno_train, self.path_img_train)
+            self.database_train = pandas.DataFrame(self.DataUnit_dict)
+
+            self.DataUnit_dict = {"name": [],
+                                  "width": [],
+                                  "height": [],
+                                  "class_name_true": [],
+                                  "class_name_identified": [],
+                                  "image": [],
+                                  "box_true": [],
+                                  "box_identified": [],
+                                  "ilosc_obiektow": [], }
+
+            self.generate_units_list(self.path_anno_test)
+            self.fill_object_list(self.path_anno_test, self.path_img_test)
+            self.database_test = pandas.DataFrame(self.DataUnit_dict)
+
             print("stworzono bazy danych i przeorganizowano pliki pomyslnie")
+
+
 
     def generate_units_list(self,path):
         onlyfiles = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
@@ -156,10 +177,30 @@ class Decode_Data:
         stop_c = 0
         traffic_light_c = 0
 
+        #edit po zrobieniu całości wyrównujący ilość speedlimit (które jest jakieś 10 razy więcej niż reszty) do poziomu reszty
+        if True: #94% 70% 71% 74%
+            min1 = np.min([speedlimit_n*part,crosswalk_n*part,traffic_light_n*part,stop_n*part])
+
+            speedlimit_end = min1
+            crosswalk_end = min1
+            stop_end = min1
+            traffic_light_end = min1
+        elif False: #93% 83%
+            speedlimit_end = speedlimit_n*part
+            crosswalk_end = crosswalk_n*part
+            stop_end = stop_n*part
+            traffic_light_end = traffic_light_n*part
+        elif False:
+            speedlimit_end = speedlimit_n * part / 6
+            crosswalk_end = crosswalk_n * part
+            stop_end = stop_n * part
+            traffic_light_end = traffic_light_n * part
+        #edit end
+
         for i in range(len(self.DataUnit_dict["name"])) :
 
             if self.DataUnit_dict["class_name_true"][i] == "speedlimit":
-                if speedlimit_c < speedlimit_n * part:
+                if speedlimit_c < speedlimit_end:
                     for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
@@ -169,7 +210,7 @@ class Decode_Data:
                 speedlimit_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "crosswalk":
-                if crosswalk_c < crosswalk_n * part:
+                if crosswalk_c < crosswalk_end:
                     for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
@@ -179,7 +220,7 @@ class Decode_Data:
                 crosswalk_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "stop":
-                if stop_c < stop_n * part:
+                if stop_c < stop_end:
                     for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:
@@ -189,7 +230,7 @@ class Decode_Data:
                 stop_c += 1
 
             if self.DataUnit_dict["class_name_true"][i] == "trafficlight":
-                if traffic_light_c < traffic_light_n * part:
+                if traffic_light_c < traffic_light_end:
                     for pole in data_train.keys():
                         data_train[pole].append(self.DataUnit_dict[pole][i])
                 else:

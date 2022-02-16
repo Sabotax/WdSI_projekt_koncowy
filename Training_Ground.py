@@ -25,6 +25,7 @@ class Training_Ground:
             for index,row in self.data_train.iterrows():
                 #wycina obrazek w locie
                 img_cropped = row['image'][row['box_true'][2]:row['box_true'][3], row['box_true'][0]:row['box_true'][1]]
+                #img = row['image']
                 kpts = sift.detect(img_cropped, None)
                 kpts, desc = sift.compute(img_cropped, kpts)
 
@@ -44,15 +45,16 @@ class Training_Ground:
         bow = cv2.BOWImgDescriptorExtractor(sift, flann)
         vocabulary = np.load('voc.npy')
         bow.setVocabulary(vocabulary)
-        # for index, row in data.iterrows():
-        #     kpt = sift.detect(row["image"],None)
-        #     desc = bow.compute(row["image"],kpt)
-        #     row["desc"] = desc
 
-        data["opis"] = None
         for i in range(len(data)):
-            kpt = sift.detect(data.loc[i,"image"], None)
-            desc = bow.compute(data.loc[i,"image"],kpt)
+            # założenie że znamy położenie znaku na obrazie i nie wykonujemy detekcji a tylko klasyfikację
+            #img_cropped = data.loc[i,'image'][data.loc[i,'box_true'][2]:data.loc[i,'box_true'][3], data.loc[i,'box_true'][0]:data.loc[i,'box_true'][1]]
+            img = data.loc[i,'image']
+            img_cropped = img[data.loc[i,'box_true'][2]:data.loc[i,'box_true'][3], data.loc[i,'box_true'][0]:data.loc[i,'box_true'][1]]
+            #print(type(img_cropped))
+            kpt = sift.detect(img_cropped, None)
+            desc = bow.compute(img_cropped,kpt)
+
             data.loc[i,"desc"] = Wrapp(desc)
 
         print("zakonczono extract_features")
@@ -64,11 +66,15 @@ class Training_Ground:
         descs = []
         labels = []
         for index,row in self.data_train.iterrows():
-            if row['desc'] is not None:
-                descs.append(row['desc'].v.squeeze(0))
+            if row['desc'].v is not None:
+                test = row['desc'].v
+                #descs.append(row['desc'].v.squeeze(0))
+                descs.append(test.squeeze(0))
                 labels.append(row['class_name_true'])
+            else:
+                print("error "+str(index))
 
-        rf = RandomForestClassifier(max_depth=3, random_state=0)
+        rf = RandomForestClassifier()
         rf.fit(descs, labels)
 
         self.rf = rf
@@ -76,12 +82,20 @@ class Training_Ground:
         print("pomyslnie nauczono")
 
     def predict_one(self,ob):
-        return self.rf.predict(ob)
+        w = self.rf.predict(ob)
+        if w == None:
+            print("error3")
+        return w
 
     def predict_all(self,data):
         for i in range(len(data)):
-            if data.loc[i,'desc'] is not None:
-                data.loc[i,'class_name_identified'] = self.predict_one(data.loc[i,'desc'].v)
+            if data.loc[i,'desc'].v is not None:
+                test2 = data.loc[i,'desc'].v
+                test = self.predict_one(test2)
+                #data.loc[i,'class_name_identified'] = self.predict_one(data.loc[i,'desc'].v)
+                data.loc[i,'class_name_identified'] =test
+            else:
+                print("error2 "+str(i))
 
         return data
 

@@ -16,4 +16,6 @@ tester = Fitness()
 data_test = trainer.predict_all(extracted_data_test)
 tester.evaulate(data_test)
 
+tester.print_zadanie(data_test)
+
 
