@@ -48,11 +48,13 @@ class Training_Ground:
         #     kpt = sift.detect(row["image"],None)
         #     desc = bow.compute(row["image"],kpt)
         #     row["desc"] = desc
+
+        data["opis"] = None
         for i in range(len(data)):
             kpt = sift.detect(data.loc[i,"image"], None)
             desc = bow.compute(data.loc[i,"image"],kpt)
-            data.loc[i,"desc"] = desc
-            data.loc[i,"test"] = "test"
+            data.loc[i,"desc"] = Wrapp(desc)
+
         print("zakonczono extract_features")
 
         return data
@@ -63,10 +65,10 @@ class Training_Ground:
         labels = []
         for index,row in self.data_train.iterrows():
             if row['desc'] is not None:
-                descs.append(row['desc'].squeeze(0))
+                descs.append(row['desc'].v.squeeze(0))
                 labels.append(row['class_name_true'])
 
-        rf = RandomForestClassifier()
+        rf = RandomForestClassifier(max_depth=3, random_state=0)
         rf.fit(descs, labels)
 
         self.rf = rf
@@ -77,6 +79,13 @@ class Training_Ground:
         return self.rf.predict(ob)
 
     def predict_all(self,data):
-        for index, row in self.data_train.iterrows():
-            if row['desc'] is not None:
-                row['class_name_identified'] = self.predict_one(row["desc"])
+        for i in range(len(data)):
+            if data.loc[i,'desc'] is not None:
+                data.loc[i,'class_name_identified'] = self.predict_one(data.loc[i,'desc'].v)
+
+        return data
+
+
+class Wrapp:
+    def __init__(self,v):
+        self.v = v

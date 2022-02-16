@@ -42,6 +42,16 @@ class Decode_Data:
             self.fill_object_list(self.path_anno_train,self.path_img_train)
             self.database_train = pandas.DataFrame(self.DataUnit_dict)
 
+            self.DataUnit_dict = {"name": [],
+                             "width": [],
+                             "height": [],
+                             "class_name_true": [],
+                             "class_name_identified": [],
+                             "image": [],
+                             "box_true": [],
+                             "box_identified": [],
+                             "ilosc_obiektow": [], }
+
             self.generate_units_list(self.path_anno_test)
             self.fill_object_list(self.path_anno_test,self.path_img_test)
             self.database_test = pandas.DataFrame(self.DataUnit_dict)

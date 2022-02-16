@@ -13,6 +13,7 @@ dekoder = Decode_Data()
 trainer = Training_Ground(dekoder.database_train)
 extracted_data_test = trainer.extract_features(dekoder.database_test)
 tester = Fitness()
-tester.evaulate(extracted_data_test)
+data_test = trainer.predict_all(extracted_data_test)
+tester.evaulate(data_test)
 
 
