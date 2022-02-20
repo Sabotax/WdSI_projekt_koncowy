@@ -34,31 +34,9 @@ class Decode_Data:
 
 
     def __init__(self):
+        print("tworze bazy danych")
+        if not os.path.isdir("train"):
 
-        if os.path.isdir("train"):
-            print("tworze baze danych 2")
-
-            self.generate_units_list(self.path_anno_train)
-            self.fill_object_list(self.path_anno_train,self.path_img_train)
-            self.database_train = pandas.DataFrame(self.DataUnit_dict)
-
-            self.DataUnit_dict = {"name": [],
-                             "width": [],
-                             "height": [],
-                             "class_name_true": [],
-                             "class_name_identified": [],
-                             "image": [],
-                             "box_true": [],
-                             "box_identified": [],
-                             "ilosc_obiektow": [], }
-
-            self.generate_units_list(self.path_anno_test)
-            self.fill_object_list(self.path_anno_test,self.path_img_test)
-            self.database_test = pandas.DataFrame(self.DataUnit_dict)
-
-            print("stworzono bazy danych 2 pomyslnie")
-        else:
-            print("tworze bazy danych")
             self.generate_units_list(self.path_anno)
             self.fill_object_list(self.path_anno,self.path_images)
             self.split_to_train_and_test(652,88,76,61)
@@ -66,25 +44,38 @@ class Decode_Data:
             self.database_test = pandas.DataFrame(self.dict_test)
             self.move_reorganize()
 
-            self.generate_units_list(self.path_anno_train)
-            self.fill_object_list(self.path_anno_train, self.path_img_train)
-            self.database_train = pandas.DataFrame(self.DataUnit_dict)
+        # zeby byla zgodnosc baz danych niezaleznie od tego czy pierwszy raz są robione (poniewaz przy rozdzielaniu moze inaczej porozdzielac zdjecia z wieloma
+        # obrazami co moze wprowadzic niezgodnosc
 
-            self.DataUnit_dict = {"name": [],
-                                  "width": [],
-                                  "height": [],
-                                  "class_name_true": [],
-                                  "class_name_identified": [],
-                                  "image": [],
-                                  "box_true": [],
-                                  "box_identified": [],
-                                  "ilosc_obiektow": [], }
+        self.DataUnit_dict = {"name": [],
+                              "width": [],
+                              "height": [],
+                              "class_name_true": [],
+                              "class_name_identified": [],
+                              "image": [],
+                              "box_true": [],
+                              "box_identified": [],
+                              "ilosc_obiektow": [], }
 
-            self.generate_units_list(self.path_anno_test)
-            self.fill_object_list(self.path_anno_test, self.path_img_test)
-            self.database_test = pandas.DataFrame(self.DataUnit_dict)
+        self.generate_units_list(self.path_anno_train)
+        self.fill_object_list(self.path_anno_train, self.path_img_train)
+        self.database_train = pandas.DataFrame(self.DataUnit_dict)
 
-            print("stworzono bazy danych i przeorganizowano pliki pomyslnie")
+        self.DataUnit_dict = {"name": [],
+                              "width": [],
+                              "height": [],
+                              "class_name_true": [],
+                              "class_name_identified": [],
+                              "image": [],
+                              "box_true": [],
+                              "box_identified": [],
+                              "ilosc_obiektow": [], }
+
+        self.generate_units_list(self.path_anno_test)
+        self.fill_object_list(self.path_anno_test, self.path_img_test)
+        self.database_test = pandas.DataFrame(self.DataUnit_dict)
+
+        print("stworzono bazy danych i przeorganizowano pliki pomyslnie")
 
 
 
@@ -177,7 +168,6 @@ class Decode_Data:
         stop_c = 0
         traffic_light_c = 0
 
-        #edit po zrobieniu całości wyrównujący ilość speedlimit (które jest jakieś 10 razy więcej niż reszty) do poziomu reszty
         if True: #94% 70% 71% 74%
             min1 = np.min([speedlimit_n*part,crosswalk_n*part,traffic_light_n*part,stop_n*part])
 
@@ -271,11 +261,5 @@ class Decode_Data:
         # warto zauważyć że o ile podział zgadza się z w bazie danych, to w podziale zdjęc na foldery, zdjecie wyladuje tam gdzie zostanie najpierw zabrane, a staranie
         # by to nie miało miejsca w przypadku gdy i tak nie robi to różnicy dla uczenia maszynowego, a i tak specjalnie są dzielone te foldery tylko dla
         # sprawdzającego to nie ma potrzeby większość sił zużywać na obracanie plikami poprawnie
-
-# TODO jestli ilosc obektow > 1 to wtedy moze przesunac, ale licnzik zwieksza o n, dodatkowa zawsze sprawdza zanim przesunie czy ma co przesunac zanim to zrobi i inkrementuje c
-#dodatkowo jesli n>1 to wszystkie krotki gdzir n
-# TODO train ograniczyc ilosc pol, zwlaszcza tylko image_cropped dzieki czemu moze byc tam uzywane bez znaczenia czy jest wiele na zdjeciu czy nie
-# TODO zeby jakos rozsadnie dzielilo krotki jesli pochodza z tego samego zdjecia
-# TODO w tym zamienic keys w kopiowaniu krotek na customowe bazy danych czyli z data_train.keys() itp
 
 

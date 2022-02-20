@@ -15,16 +15,14 @@ class Fitness:
             if row['desc'].v is not None and row['class_name_identified'] is not None:
                 pred_labels.append(row['class_name_identified'])
                 true_labels.append(row['class_name_true'])
+                mianownik += 1
                 if row['class_name_identified'] == row['class_name_true']:
                     licznik += 1
-                # else:
-                #     print(row['name']+" prawdziwa: "+row["class_name_true"]+" rozpoznana: "+row['class_name_identified'])
 
-            mianownik += 1
+            #mianownik += 1
         accuracy = licznik / mianownik
         conf_matrix = confusion_matrix(true_labels, pred_labels,labels=["speedlimit", "crosswalk", "stop","trafficlight"])
-        # traffic light zostaje najcześciej mylone i najczęściej jest mylone z speedlimit, w następnej kolejności stop i crosswalk są mylone ze speedlimit, ale też
-        # w bazie danych jest taki problem, że speedlimit jest o wiele wiele więcej niż pozostałych więc średnio równomiernie
+
         print("---------")
         print("Accuracy:", accuracy)
         print("Mass confusion:")
